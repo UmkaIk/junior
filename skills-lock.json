@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "brand-story": {
+      "source": "arnabbagxd/Brand-building-skills",
+      "sourceType": "github",
+      "skillPath": "skills/brand-story/SKILL.md",
+      "computedHash": "900df958c59687f5d7322d4fdabd1906b0b28e9fa1e5791da5cd943081948106"
+    },
+    "brand-voice": {
+      "source": "arnabbagxd/Brand-building-skills",
+      "sourceType": "github",
+      "skillPath": "skills/brand-voice/SKILL.md",
+      "computedHash": "c04b1875dd7c3669834bccc68a0c7523468dd62166d2b3289fc8bc3d6035a656"
+    },
     "content-strategy": {
       "source": "coreyhaines31/marketingskills",
       "sourceType": "github",
