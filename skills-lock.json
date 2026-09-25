@@ -66,12 +66,6 @@
       "sourceType": "github",
       "skillPath": "skills/social/SKILL.md",
       "computedHash": "906a0529e4ee506c3e2ae81d6dab72d98d2933ec3dac0f332d6b8a2e67acf6a0"
-    },
-    "task-observer": {
-      "source": "rebelytics/one-skill-to-rule-them-all",
-      "sourceType": "github",
-      "skillPath": "SKILL.md",
-      "computedHash": "836c9f54ce4f0e005f6fafc9d078ab8efabff59ad17f5083c5b1346c1ecf9fed"
     }
   }
 }
