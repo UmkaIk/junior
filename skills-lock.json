@@ -37,6 +37,12 @@
       "skillPath": "skills/marketing-plan/SKILL.md",
       "computedHash": "be076e56f42ae98202d3d62a6fe5d229fcc54dc5dbad2cb2fe42253b56364a7c"
     },
+    "personal-brand": {
+      "source": "arnabbagxd/Brand-building-skills",
+      "sourceType": "github",
+      "skillPath": "skills/personal-brand/SKILL.md",
+      "computedHash": "b9c8d535aa3faa02d3ac20b69df6f63bf190687ffce90d5ac0f205230a365a8e"
+    },
     "product-marketing": {
       "source": "coreyhaines31/marketingskills",
       "sourceType": "github",
