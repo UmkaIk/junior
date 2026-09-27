@@ -1,4 +1,3 @@
-import { createTikTokStyleCaptions } from "@remotion/captions";
 import type { Caption } from "@remotion/captions";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -10,8 +9,39 @@ import {
 } from "remotion";
 import { ACCENT, INK, TEXT, fontFamily } from "./brand";
 
-// How long a group of words stays on screen before the next one.
-const SWITCH_CAPTIONS_EVERY_MS = 900;
+// At most this many words on screen at once, so the pill stays small.
+const MAX_WORDS_PER_PAGE = 2;
+// A page lingers this long after its last word unless the next one starts.
+const LINGER_MS = 400;
+
+type Page = { startMs: number; endMs: number; tokens: Caption[] };
+
+const toPages = (captions: Caption[]): Page[] => {
+  const pages: Page[] = [];
+  let current: Caption[] = [];
+  const flush = () => {
+    if (current.length > 0) {
+      pages.push({
+        startMs: current[0].startMs,
+        endMs: current[current.length - 1].endMs,
+        tokens: current,
+      });
+      current = [];
+    }
+  };
+  for (const c of captions) {
+    const prev = current[current.length - 1];
+    if (
+      current.length >= MAX_WORDS_PER_PAGE ||
+      (prev && (prev.pageBreakAfter || c.startMs - prev.endMs > LINGER_MS))
+    ) {
+      flush();
+    }
+    current.push(c);
+  }
+  flush();
+  return pages;
+};
 
 type Props = {
   // Time windows (seconds) where a plaque already shows these words.
@@ -43,11 +73,15 @@ export const Captions: React.FC<Props> = ({ hideDuring }) => {
     if (!captions) {
       return [];
     }
-    return createTikTokStyleCaptions({
-      captions,
-      combineTokensWithinMilliseconds: SWITCH_CAPTIONS_EVERY_MS,
-    }).pages;
-  }, [captions]);
+    // Words a plaque already shows never appear as captions.
+    const spoken = captions.filter(
+      (c) =>
+        !hideDuring.some(
+          (w) => c.startMs >= w.from * 1000 && c.startMs < w.to * 1000,
+        ),
+    );
+    return toPages(spoken);
+  }, [captions, hideDuring]);
 
   const timeMs = (frame / fps) * 1000;
   const hidden = hideDuring.some(
@@ -56,7 +90,7 @@ export const Captions: React.FC<Props> = ({ hideDuring }) => {
   const page = pages.find(
     (p, i) =>
       timeMs >= p.startMs &&
-      timeMs < Math.min(p.startMs + p.durationMs, pages[i + 1]?.startMs ?? Infinity),
+      timeMs < Math.min(p.endMs + LINGER_MS, pages[i + 1]?.startMs ?? Infinity),
   );
 
   if (hidden || !page) {
@@ -70,22 +104,22 @@ export const Captions: React.FC<Props> = ({ hideDuring }) => {
         style={{
           fontFamily,
           fontWeight: 800,
-          fontSize: 78,
-          lineHeight: 1.15,
-          maxWidth: 920,
+          fontSize: 72,
+          lineHeight: 1.1,
           textAlign: "center",
-          whiteSpace: "pre-wrap",
-          textWrap: "balance",
+          // One short line on a compact translucent pill.
+          whiteSpace: "pre",
           color: TEXT,
-          WebkitTextStroke: `12px ${INK}`,
-          paintOrder: "stroke fill",
+          background: `${INK}B8`,
+          padding: "10px 24px",
+          borderRadius: 18,
         }}
       >
-        {page.tokens.map((t) => {
-          const active = timeMs >= t.fromMs && timeMs < t.toMs;
+        {page.tokens.map((t, i) => {
+          const active = timeMs >= t.startMs && timeMs < t.endMs;
           return (
-            <span key={t.fromMs} style={{ color: active ? ACCENT : TEXT }}>
-              {t.text}
+            <span key={t.startMs} style={{ color: active ? ACCENT : TEXT }}>
+              {(i === 0 ? t.text.trimStart() : t.text).replace(/[.,]$/, "")}
             </span>
           );
         })}
