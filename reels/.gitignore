@@ -12,3 +12,4 @@ public/*.mov
 public/*.MOV
 # Transcripts of personal recordings
 src/words.json
+public/captions.json

@@ -1,4 +1,3 @@
-import { loadFont } from "@remotion/fonts";
 import { Video } from "@remotion/media";
 import {
   AbsoluteFill,
@@ -10,25 +9,21 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-
-// Bundled locally (variable font, Latin + Cyrillic) so renders never depend
-// on reaching Google Fonts.
-const fontFamily = "Montserrat";
-loadFont({
-  family: fontFamily,
-  url: staticFile("fonts/Montserrat.ttf"),
-  weight: "100 900",
-});
-
-const ACCENT = "#FF6B35";
-const INK = "#111111";
+import { ACCENT, INK, TEXT, fontFamily } from "./brand";
+import { Captions } from "./Captions";
 
 // Seconds come from the word timings of the recording, so each plaque
 // appears on the word it quotes.
+// `accent` is the part of the text painted in the accent color.
 const PLAQUES = [
-  { text: "Без монтажёра", from: 4.0, to: 5.7 },
-  { text: "Без ничего", from: 9.42, to: 10.8 },
-  { text: "Смотрят по всему миру", from: 19.12, to: 22.4 },
+  { text: "Без монтажёра", accent: "монтажёра", from: 4.0, to: 5.7 },
+  { text: "Без ничего", accent: "ничего", from: 9.42, to: 10.8 },
+  {
+    text: "Смотрят по всему миру",
+    accent: "всему миру",
+    from: 19.12,
+    to: 22.4,
+  },
 ];
 
 const HOOK_END = 2.3;
@@ -60,7 +55,7 @@ const Hook: React.FC = () => {
           lineHeight: 1.05,
           textAlign: "center",
           textTransform: "uppercase",
-          color: "white",
+          color: TEXT,
           background: INK,
           padding: "28px 44px",
           borderRadius: 28,
@@ -77,10 +72,11 @@ const Hook: React.FC = () => {
   );
 };
 
-const Plaque: React.FC<{ text: string; durationInFrames: number }> = ({
-  text,
-  durationInFrames,
-}) => {
+const Plaque: React.FC<{
+  text: string;
+  accent: string;
+  durationInFrames: number;
+}> = ({ text, accent, durationInFrames }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const enter = spring({ frame, fps, config: { damping: 18, mass: 0.6 } });
@@ -100,11 +96,10 @@ const Plaque: React.FC<{ text: string; durationInFrames: number }> = ({
           fontWeight: 800,
           fontSize: 72,
           lineHeight: 1.15,
-          color: "white",
+          color: TEXT,
           background: INK,
           padding: "22px 36px",
           borderRadius: 22,
-          borderLeft: `12px solid ${ACCENT}`,
           maxWidth: 900,
           textAlign: "center",
           textWrap: "balance",
@@ -112,7 +107,9 @@ const Plaque: React.FC<{ text: string; durationInFrames: number }> = ({
           scale: 0.85 + Math.min(enter, 1.05) * 0.15,
         }}
       >
-        {text}
+        {text.slice(0, text.indexOf(accent))}
+        <span style={{ color: ACCENT }}>{accent}</span>
+        {text.slice(text.indexOf(accent) + accent.length)}
       </div>
     </AbsoluteFill>
   );
@@ -125,11 +122,13 @@ export const Reel: React.FC = () => {
     <AbsoluteFill style={{ backgroundColor: "black" }}>
       <Video
         src={staticFile("video.mp4")}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        objectFit="cover"
+        style={{ width: "100%", height: "100%" }}
       />
       <Sequence name="Hook" durationInFrames={Math.round(HOOK_END * fps)}>
         <Hook />
       </Sequence>
+      <Captions hideDuring={PLAQUES} />
       {PLAQUES.map((p) => {
         const durationInFrames = Math.round((p.to - p.from) * fps);
         return (
@@ -139,7 +138,11 @@ export const Reel: React.FC = () => {
             from={Math.round(p.from * fps)}
             durationInFrames={durationInFrames}
           >
-            <Plaque text={p.text} durationInFrames={durationInFrames} />
+            <Plaque
+              text={p.text}
+              accent={p.accent}
+              durationInFrames={durationInFrames}
+            />
           </Sequence>
         );
       })}
