@@ -13,3 +13,5 @@ public/*.MOV
 # Transcripts of personal recordings
 src/words.json
 public/captions.json
+# Personal photos for statuses
+public/status/
