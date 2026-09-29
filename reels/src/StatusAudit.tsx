@@ -11,7 +11,7 @@ export const statusAuditSchema = z.object({
   audience: z.string(),
   offer: z.string(),
   offerNote: z.string(),
-  scarcity: z.string(),
+  scarcity: z.string().optional(),
   contacts: z.array(z.object({ label: z.string(), value: z.string() })),
 });
 
@@ -45,7 +45,8 @@ export const StatusAudit: React.FC<Props> = ({
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            objectPosition: "50% 12%",
+            // Lower part of the desk shot: notebook and book, not the screen.
+            objectPosition: "50% 96%",
           }}
         />
         <AbsoluteFill
@@ -139,17 +140,19 @@ export const StatusAudit: React.FC<Props> = ({
           </div>
         </div>
 
-        <div
-          style={{
-            marginTop: 36,
-            fontSize: 36,
-            fontWeight: 700,
-            lineHeight: 1.3,
-            textWrap: "balance",
-          }}
-        >
-          {scarcity}
-        </div>
+        {scarcity ? (
+          <div
+            style={{
+              marginTop: 36,
+              fontSize: 36,
+              fontWeight: 700,
+              lineHeight: 1.3,
+              textWrap: "balance",
+            }}
+          >
+            {scarcity}
+          </div>
+        ) : null}
 
         <div
           style={{

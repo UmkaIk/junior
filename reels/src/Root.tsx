@@ -46,7 +46,6 @@ export const RemotionRoot: React.FC = () => {
           audience: "Своё дело или свои услуги.",
           offer: "Бесплатно посмотрю вашу страницу",
           offerNote: "Страницы нет — подскажу, с чего начать.",
-          scarcity: "Для первых 3 человек цена стартовая.",
           contacts: [{ label: "Telegram", value: "@username" }],
         }}
         width={1080}
