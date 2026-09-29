@@ -2,6 +2,7 @@ import "./index.css";
 import { Composition, Still } from "remotion";
 import { REEL_DURATION_SECONDS, Reel } from "./Reel";
 import { Status } from "./Status";
+import { StatusClients, statusClientsSchema } from "./StatusClients";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -15,6 +16,22 @@ export const RemotionRoot: React.FC = () => {
         height={1920}
       />
       <Still id="Status" component={Status} width={1080} height={1920} />
+      {/* Render with --props=public/status/clients.json for the real texts. */}
+      <Still
+        id="StatusClients"
+        component={StatusClients}
+        schema={statusClientsSchema}
+        defaultProps={{
+          headline: "Клиенты из рилсов.",
+          headlineAccent: "рилсов",
+          subline: "Вы только снимаете на телефон.",
+          body: "Остальное делаю я: монтаж, о чём снять, что сказать.",
+          punch: "Без кривляний и трендов.",
+          contacts: [{ label: "Telegram", value: "@username" }],
+        }}
+        width={1080}
+        height={1920}
+      />
     </>
   );
 };
