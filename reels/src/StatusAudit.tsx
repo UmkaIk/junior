@@ -38,15 +38,15 @@ export const StatusAudit: React.FC<Props> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: INK, fontFamily, color: TEXT }}>
-      <AbsoluteFill style={{ height: 1000, overflow: "hidden" }}>
+      <AbsoluteFill style={{ height: 1100, overflow: "hidden" }}>
         <Img
           src={staticFile(`status/${photo}`)}
           style={{
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            // Lower part of the desk shot: notebook and book, not the screen.
-            objectPosition: "50% 96%",
+            // Desk shot: bottom third of the screen, notebook and book.
+            objectPosition: "50% 55%",
           }}
         />
         <AbsoluteFill
