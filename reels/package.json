@@ -11,6 +11,7 @@
     "@remotion/fonts": "4.0.529",
     "@remotion/media": "4.0.529",
     "@remotion/tailwind-v4": "4.0.529",
+    "mediabunny": "1.56.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.529",

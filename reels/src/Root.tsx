@@ -1,6 +1,6 @@
 import "./index.css";
 import { Composition, Still } from "remotion";
-import { REEL_DURATION_SECONDS, Reel } from "./Reel";
+import { Reel, calculateReelMetadata } from "./Reel";
 import { Status } from "./Status";
 import { StatusAudit, statusAuditSchema } from "./StatusAudit";
 import { StatusClients, statusClientsSchema } from "./StatusClients";
@@ -11,7 +11,10 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="Reel"
         component={Reel}
-        durationInFrames={Math.round(REEL_DURATION_SECONDS * 30)}
+        // Duration, captions and plaque timings come from public/ files.
+        calculateMetadata={calculateReelMetadata}
+        defaultProps={{ captions: [], plaques: [] }}
+        durationInFrames={1}
         fps={30}
         width={1080}
         height={1920}

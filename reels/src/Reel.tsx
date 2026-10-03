@@ -1,6 +1,9 @@
+import type { Caption } from "@remotion/captions";
 import { Video } from "@remotion/media";
+import { ALL_FORMATS, Input, UrlSource } from "mediabunny";
 import {
   AbsoluteFill,
+  CalculateMetadataFunction,
   Easing,
   Sequence,
   interpolate,
@@ -11,24 +14,69 @@ import {
 } from "remotion";
 import { ACCENT, INK, TEXT, fontFamily } from "./brand";
 import { Captions } from "./Captions";
+import { Cue, endOf, startOf } from "./cues";
 
-// Seconds come from the word timings of the recording, so each plaque
-// appears on the word it quotes.
+// Each plaque appears on the word it quotes and stays until `until` has been
+// said, plus HOLD_S. Cues are words, not seconds, so after any re-cut the
+// graphics follow the speech on their own.
 // `accent` is the part of the text painted in the accent color.
-const PLAQUES = [
-  { text: "Без монтажёра", accent: "монтажёра", from: 4.0, to: 5.7 },
-  { text: "Без ничего", accent: "ничего", from: 9.42, to: 10.8 },
+const PLAQUES: { text: string; accent: string; from: Cue; until: Cue }[] = [
+  {
+    text: "Без монтажёра",
+    accent: "монтажёра",
+    from: { word: "без" },
+    until: { word: "монтажёра" },
+  },
+  {
+    text: "Без ничего",
+    accent: "ничего",
+    from: { word: "без", n: 2 },
+    until: { word: "ничего" },
+  },
   {
     text: "Смотрят по всему миру",
     accent: "всему миру",
-    from: 19.12,
-    to: 22.4,
+    from: { word: "смотрят" },
+    until: { word: "миру" },
   },
 ];
+const HOLD_S = 0.6;
 
 const HOOK_END = 2.3;
+const FPS = 30;
 
-export const REEL_DURATION_SECONDS = 23.6;
+type Window = { text: string; accent: string; from: number; to: number };
+
+export type ReelProps = {
+  captions: Caption[];
+  plaques: Window[];
+};
+
+// Reads the prepared files once: the reel lasts as long as the video, and
+// plaque cues turn into seconds against the word timings.
+export const calculateReelMetadata: CalculateMetadataFunction<
+  ReelProps
+> = async () => {
+  const captions: Caption[] = await (
+    await fetch(staticFile("captions.json"))
+  ).json();
+  const input = new Input({
+    formats: ALL_FORMATS,
+    source: new UrlSource(staticFile("video.mp4")),
+  });
+  const seconds = await input.computeDuration();
+  const plaques = PLAQUES.map((p) => ({
+    text: p.text,
+    accent: p.accent,
+    from: startOf(captions, p.from),
+    to: Math.min(endOf(captions, p.until) + HOLD_S, seconds),
+  }));
+  return {
+    durationInFrames: Math.round(seconds * FPS),
+    fps: FPS,
+    props: { captions, plaques },
+  };
+};
 
 const Hook: React.FC = () => {
   const frame = useCurrentFrame();
@@ -115,7 +163,7 @@ const Plaque: React.FC<{
   );
 };
 
-export const Reel: React.FC = () => {
+export const Reel: React.FC<ReelProps> = ({ captions, plaques }) => {
   const { fps } = useVideoConfig();
 
   return (
@@ -128,8 +176,8 @@ export const Reel: React.FC = () => {
       <Sequence name="Hook" durationInFrames={Math.round(HOOK_END * fps)}>
         <Hook />
       </Sequence>
-      <Captions hideDuring={PLAQUES} />
-      {PLAQUES.map((p) => {
+      <Captions captions={captions} hideDuring={plaques} />
+      {plaques.map((p) => {
         const durationInFrames = Math.round((p.to - p.from) * fps);
         return (
           <Sequence

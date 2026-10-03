@@ -15,3 +15,10 @@ src/words.json
 public/captions.json
 # Personal photos for statuses
 public/status/
+# Working files: takes, cuts, temp audio
+.tmp/
+public/source-captions.json
+public/*.mp3
+public/*.wav
+public/*.m4a
+__pycache__/
