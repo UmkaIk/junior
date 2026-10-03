@@ -1,12 +1,6 @@
 import type { Caption } from "@remotion/captions";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AbsoluteFill,
-  staticFile,
-  useCurrentFrame,
-  useDelayRender,
-  useVideoConfig,
-} from "remotion";
+import { useMemo } from "react";
+import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { ACCENT, INK, TEXT, fontFamily } from "./brand";
 
 // At most this many words on screen at once, so the pill stays small.
@@ -44,35 +38,15 @@ const toPages = (captions: Caption[]): Page[] => {
 };
 
 type Props = {
+  captions: Caption[];
   // Time windows (seconds) where a plaque already shows these words.
   hideDuring: { from: number; to: number }[];
 };
 
-export const Captions: React.FC<Props> = ({ hideDuring }) => {
+export const Captions: React.FC<Props> = ({ captions, hideDuring }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const [captions, setCaptions] = useState<Caption[] | null>(null);
-  const { delayRender, continueRender, cancelRender } = useDelayRender();
-  const [handle] = useState(() => delayRender());
-
-  const fetchCaptions = useCallback(async () => {
-    try {
-      const response = await fetch(staticFile("captions.json"));
-      setCaptions(await response.json());
-      continueRender(handle);
-    } catch (e) {
-      cancelRender(e);
-    }
-  }, [continueRender, cancelRender, handle]);
-
-  useEffect(() => {
-    fetchCaptions();
-  }, [fetchCaptions]);
-
   const pages = useMemo(() => {
-    if (!captions) {
-      return [];
-    }
     // Words a plaque already shows never appear as captions.
     const spoken = captions.filter(
       (c) =>
