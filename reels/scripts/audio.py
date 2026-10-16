@@ -36,6 +36,12 @@ def duration(path):
                       "-of", "csv=p=0", path]).stdout)
 
 
+# loudnorm can silently skip peak limiting (linear mode it can't honour), so
+# a hard limiter closes every chain: -2 dBFS sample peak keeps the AAC file's
+# true peak under -1.
+LIMITER = f"alimiter=limit={10 ** (-2 / 20):.3f}:level=false"
+
+
 def loudnorm(target, peak=TRUE_PEAK):
     return f"loudnorm=I={target}:TP={peak}:LRA=11"
 
@@ -71,7 +77,7 @@ def main():
     voice_chain = "highpass=f=80"
     if floor > NOISY_FLOOR_DB:
         voice_chain += ",afftdn=nf=-25"
-    voice = f"{voice_chain},{measured(a.src, voice_chain, VOICE_LUFS)}"
+    voice = f"{voice_chain},{measured(a.src, voice_chain, VOICE_LUFS)},{LIMITER}"
     print(f"Noise floor {floor:.1f} dBFS -> denoise {'on' if 'afftdn' in voice else 'off'}")
 
     tmp_voice = ".tmp/voice.wav"
@@ -99,7 +105,7 @@ def main():
              "-filter_complex", graph, "-map", "[mix]", "-ar", "48000", tmp_mix])
         final = ".tmp/final.wav"
         run(["ffmpeg", "-v", "error", "-y", "-i", tmp_mix, "-af",
-             measured(tmp_mix, "anull", VOICE_LUFS), "-ar", "48000", final])
+             f"{measured(tmp_mix, 'anull', VOICE_LUFS)},{LIMITER}", "-ar", "48000", final])
     else:
         final = tmp_voice
 
