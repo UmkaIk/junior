@@ -345,8 +345,11 @@ class Game:
 
     def _bot_act(self, bot, passive=False):
         m, sk = self.market, self.skill
-        for o in m.orders_of(bot):  # снимаем устаревшие заявки
-            if self.elapsed - o.time > random.uniform(25, 60):
+        # снимаем устаревшие заявки; в длинной сессии они живут дольше, иначе стаканы пустеют,
+        # пока боты ждут своего темпа
+        life = max(1.0, self.duration / 1800)
+        for o in m.orders_of(bot):
+            if self.elapsed - o.time > random.uniform(25, 60) * life:
                 m.cancel(o)
         if len(m.orders_of(bot)) >= 6:
             return
@@ -356,7 +359,7 @@ class Game:
             done = sum(bot.sold.values()) / sum(STOCK.values())
         else:
             done = (BUYER_CASH - bot.cash) / BUYER_CASH
-        if done > t_frac * 0.9 + 0.12:
+        if done > t_frac * 0.9 + 0.06:
             return
         weights = [3 if any(t.product == p and not t.done(bot) for t in bot.tasks) else 1 for p in PNAME]
         p = random.choices(list(PNAME), weights)[0]
@@ -417,8 +420,10 @@ class Game:
 # ---------------------------------------------------------------- рекорды
 def load_records():
     try:
-        return json.loads(RECORDS_FILE.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        data = json.loads(RECORDS_FILE.read_text(encoding="utf-8"))
+        # испорченный файл не должен ломать меню: берём только похожие на записи элементы
+        return [r for r in data if isinstance(r, dict) and isinstance(r.get("score"), (int, float))]
+    except (OSError, ValueError, TypeError):
         return []
 
 
@@ -428,7 +433,7 @@ def save_record(result):
     rows = result["sellers"] if me.role == SELLER else result["buyers"]
     row = next(r for r in rows if r["player"] is me)
     records = load_records()
-    best = max([r["score"] for r in records if r.get("role") == me.role] or [0])
+    prev = [r["score"] for r in records if r.get("role") == me.role]   # до этой игры
     records.append(dict(name=me.name, role=me.role, score=row["score"], minutes=result["minutes"],
                         difficulty=result["difficulty"], place=rows.index(row) + 1, of=len(rows),
                         date=time.strftime("%d.%m.%Y %H:%M")))
@@ -436,7 +441,8 @@ def save_record(result):
         RECORDS_FILE.write_text(json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8")
     except OSError:
         pass
-    return row["score"] > best and row["score"] > 0
+    # первая игра за роль — не рекорд: побить пока нечего
+    return bool(prev) and row["score"] > max(prev)
 
 
 # ---------------------------------------------------------------- интерфейс
@@ -452,13 +458,18 @@ class App:
         self.root = root
         self.minutes_override = minutes_override
         root.title("Биржевой терминал — Нефтепродукты")
-        root.geometry("1420x880")
-        root.minsize(1000, 650)
+        # окно не больше экрана (ноутбук 1366×768), с запасом на панель задач и заголовок
+        sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
+        root.geometry(f"{min(1420, sw)}x{min(880, sh - 70)}+0+0")
+        root.minsize(min(1000, sw), min(650, sh - 70))
         root.configure(bg=BG)
         try:
             root.state("zoomed")          # на Windows — развернуть на весь экран
         except tk.TclError:
-            pass
+            try:
+                root.attributes("-zoomed", True)   # то же на Linux
+            except tk.TclError:
+                pass
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Treeview", background=PANEL, fieldbackground=PANEL, foreground=FG, rowheight=24, font=FONT)
@@ -566,10 +577,11 @@ class App:
             for role in (SELLER, BUYER):
                 top = sorted([r for r in records if r.get("role") == role], key=lambda r: -r["score"])[:3]
                 for i, r in enumerate(top, 1):
+                    score = f"{r['score'] / 1e6:,.1f}".replace(",", " ")   # пробелы — только в очках, не во всей строке
                     tk.Label(box, bg=BG, fg=MUTED, font=FONT,
-                             text=f"{ROLE_NAME[role]} #{i}: {r['name']} — {r['score'] / 1e6:,.1f} очк. "
-                                  f"({r['minutes']:g} мин, боты {r['difficulty'].lower()}, {r['date']})"
-                             .replace(",", " ")).pack()
+                             text=f"{ROLE_NAME[role]} #{i}: {r.get('name', '?')} — {score} очк. "
+                                  f"({r.get('minutes', 0):g} мин, боты {str(r.get('difficulty', '')).lower()}, "
+                                  f"{r.get('date', '')})").pack()
 
     def role_menu(self, button, title, minutes):
         menu = tk.Menu(self.root, tearoff=0, font=FONT_B)
@@ -599,7 +611,6 @@ class App:
         top = tk.Frame(f, bg=PANEL)
         top.pack(fill="x")
         self.lbl_top = tk.Label(top, bg=PANEL, fg=FG, font=("Segoe UI", 11, "bold"), anchor="w")
-        self.lbl_top.pack(side="left", padx=12, pady=8)
         for text, color, cmd in (("Завершить", RED, self.end_early), ("Правила", PANEL, self.show_rules),
                                  ("Расставить", PANEL, self.arrange)):
             tk.Button(top, text=text, bg=color, fg="white" if color == RED else FG, relief="flat", font=FONT,
@@ -609,6 +620,8 @@ class App:
         self.btn_pause.pack(side="right", padx=4)
         self.lbl_time = tk.Label(top, bg=PANEL, fg=GOLD, font=("Consolas", 16, "bold"))
         self.lbl_time.pack(side="right", padx=16)
+        # пакуем последним: на узком экране обрежется сводка, а не таймер и кнопки
+        self.lbl_top.pack(side="left", padx=12, pady=8, fill="x", expand=True)
 
         self.status = tk.Label(f, bg=PANEL, fg=MUTED, font=FONT, anchor="w", padx=12,
                                text="Двойной клик по стакану — заявка. Стаканы двигаются за заголовок. Пробел — пауза.")
@@ -616,7 +629,7 @@ class App:
 
         body = tk.Frame(f, bg=BG)
         body.pack(fill="both", expand=True)
-        side = tk.Frame(body, bg=PANEL, width=400)
+        side = tk.Frame(body, bg=PANEL, width=360)   # 360 — чтобы на 1366 px влезали 3 стакана в ряд
         side.pack(side="right", fill="y")
         side.pack_propagate(False)
 
@@ -632,8 +645,12 @@ class App:
         self.ws.grid(row=0, column=0, sticky="nsew")
         vs.grid(row=0, column=1, sticky="ns")
         hs.grid(row=1, column=0, sticky="ew")
-        self.ws.bind("<MouseWheel>", lambda e: self.ws.yview_scroll(-1 if e.delta > 0 else 1, "units"))
         self.books = {key: BookWidget(self, key) for key, *_ in PRODUCTS}
+        # колесо мыши — и над пустым полем, и над стаканами (Button-4/5 — колесо на Linux)
+        for w in [self.ws] + [c for b in self.books.values() for c in [b] + b.winfo_children()]:
+            w.bind("<MouseWheel>", lambda e: self.ws.yview_scroll(-1 if e.delta > 0 else 1, "units"))
+            w.bind("<Button-4>", lambda e: self.ws.yview_scroll(-1, "units"))
+            w.bind("<Button-5>", lambda e: self.ws.yview_scroll(1, "units"))
         self.ws.bind("<Configure>", lambda e: self.update_region())
         self.arrange()
 
@@ -659,11 +676,18 @@ class App:
         self.lst_trades = tk.Listbox(side, height=9, bg=BG, fg=FG, font=MONO, borderwidth=0, highlightthickness=0)
         self.lst_trades.pack(fill="x", padx=10)
         section("Новости рынка")
-        self.lst_news = tk.Listbox(side, height=8, bg=BG, fg=FG, font=FONT, borderwidth=0, highlightthickness=0)
+        # Text, а не Listbox: длинные новости переносятся, а не обрезаются справа
+        self.lst_news = tk.Text(side, height=8, bg=BG, fg=FG, font=FONT, borderwidth=0, highlightthickness=0,
+                                wrap="word", padx=4, pady=2, cursor="arrow", state="disabled")
+        self.lst_news.tag_configure("up", foreground=GREEN, lmargin2=16)
+        self.lst_news.tag_configure("down", foreground=RED, lmargin2=16)
         self.lst_news.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self._shown_news = 0
         self._shown_orders = []
         self._seen_trades = len(self.game.market.trades)
         self._shown_trades = None
+        if getattr(self, "_tick_job", None):     # цикл прошлой игры не должен идти параллельно
+            self.root.after_cancel(self._tick_job)
         self.tick()
 
     def update_region(self):
@@ -675,6 +699,11 @@ class App:
         """Расставить стаканы сеткой под текущую ширину окна."""
         self.root.update_idletasks()
         cols = max(1, min(3, (self.ws.winfo_width() - 10) // (BookWidget.W + 14)))
+        # высоту стаканов подбираем так, чтобы два ряда влезали в окно без прокрутки
+        n_rows = min(2, -(-len(self.books) // cols))
+        for w in self.books.values():
+            w.fit_height((self.ws.winfo_height() - 10) // n_rows - 12)
+        self.root.update_idletasks()
         for i, w in enumerate(self.books.values()):
             w.move_to(10 + (i % cols) * (BookWidget.W + 14), 10 + (i // cols) * (w.winfo_reqheight() + 12))
         self.update_region()
@@ -701,7 +730,7 @@ class App:
             self.show_results()
             return
         self.refresh()
-        self.root.after(500, self.tick)
+        self._tick_job = self.root.after(500, self.tick)
 
     def refresh(self):
         g = self.game
@@ -710,13 +739,19 @@ class App:
         me = g.me
         self.lbl_time.configure(text=("ПАУЗА " if g.paused else "") + fmt_clock(g.time_left()))
         if me.role == BUYER:
-            res = f"Деньги: {fmt_mln(me.cash)} (свободно {fmt_mln(me.free_cash())})  ·  куплено {sum(me.bought.values())} т"
+            res = f"Деньги: {fmt_mln(me.cash)} (своб. {fmt_mln(me.free_cash())}) · куплено {sum(me.bought.values())} т"
         else:
-            res = (f"Товар: {sum(me.stock.values())} т (свободно {sum(me.free_stock(p) for p in PNAME)} т)  ·  "
+            res = (f"Товар: {sum(me.stock.values())} т (своб. {sum(me.free_stock(p) for p in PNAME)} т) · "
                    f"выручка {fmt_mln(me.revenue)}")
-        self.lbl_top.configure(text=f"{me.name}  ·  {ROLE_NAME[me.role]}  ·  {res}  ·  множитель ×{me.multiplier():.2f}")
+        # компактно: на экране 1366 px строка должна влезать рядом с таймером и кнопками
+        self.lbl_top.configure(text=f"{ROLE_NAME[me.role]} · {res} · множитель ×{me.multiplier():.2f}")
         for w in self.books.values():
             w.draw()
+        for d in list(self.dialogs):    # открытые окна заявок: живые лучшие цены и подсказка
+            if not d.winfo_exists():
+                self.dialogs.discard(d)
+            elif isinstance(d, OrderDialog):
+                d.update_info()
 
         lines = []
         verb = "Продать" if me.role == SELLER else "Купить"
@@ -758,11 +793,14 @@ class App:
                 self.lst_trades.insert("end", f"{PNAME[p][:14]:<14} {q:>4} т × {price:>6}{' ◀ вы' if mine else ''}")
                 if mine:
                     self.lst_trades.itemconfigure("end", fg=GOLD)
-        if self.lst_news.size() != len(g.news):
-            self.lst_news.delete(0, "end")
+        if self._shown_news != len(g.news):
+            self._shown_news = len(g.news)
+            self.lst_news.configure(state="normal")
+            self.lst_news.delete("1.0", "end")
             for sec, text, up in reversed(g.news):
-                self.lst_news.insert("end", f"{int(sec) // 60:02d}:{int(sec) % 60:02d} {'▲' if up else '▼'} {text}")
-                self.lst_news.itemconfigure("end", fg=GREEN if up else RED)
+                self.lst_news.insert("end", f"{int(sec) // 60:02d}:{int(sec) % 60:02d} {'▲' if up else '▼'} {text}\n",
+                                     "up" if up else "down")
+            self.lst_news.configure(state="disabled")
             if g.news:
                 sec, text, up = g.news[-1]
                 self.set_status(f"Новость: {text}", GREEN if up else RED)
@@ -790,7 +828,8 @@ class App:
         self.dialogs.add(OrderDialog(self, product, price))
 
     def end_early(self):
-        if messagebox.askyesno("Завершить", "Завершить сессию и подвести итоги?"):
+        # пока висел вопрос, время могло кончиться и итоги уже показаны — тогда self.game is None
+        if messagebox.askyesno("Завершить", "Завершить сессию и подвести итоги?") and self.game:
             self.show_results()
 
     # ---------------- итоги
@@ -814,8 +853,10 @@ class App:
         body.pack(pady=6)
         left = tk.Frame(body, bg=BG)
         left.pack(side="left", anchor="n", padx=10)
-        right = tk.Frame(body, bg=PANEL, padx=14, pady=10)
-        right.pack(side="left", anchor="n", padx=10, pady=14)
+        col = tk.Frame(body, bg=BG)          # правая колонка: сводка и кнопки под ней — не уезжают за низ экрана
+        col.pack(side="left", anchor="n", padx=10, pady=14)
+        right = tk.Frame(col, bg=PANEL, padx=14, pady=10)
+        right.pack(fill="x")
 
         def table(title, rows, buyer):
             winner = rows[0]["player"].name if rows and rows[0]["score"] > 0 else "—"
@@ -828,7 +869,8 @@ class App:
             tv = ttk.Treeview(left, columns=cols, show="headings", height=max(1, min(len(rows), 7)))
             for c in cols:
                 tv.heading(c, text=c)
-                tv.column(c, width=190 if c == "Участник" else 60 if c == "Место" else 105, anchor="center")
+                tv.column(c, width=190 if c == "Участник" else 60 if c == "Место" else 130 if c == "Индекс выгоды"
+                          else 105, anchor="center")
             for i, r in enumerate(rows, 1):
                 vals = [i, r["player"].name + (" (вы)" if not r["player"].is_bot else ""), r["volume"], fmt_mln(r["money"])]
                 if buyer:
@@ -867,12 +909,12 @@ class App:
         tk.Label(right, text="Задания:\n" + tasks + f"\nИтоговый множитель: ×{me.multiplier():.2f}",
                  bg=PANEL, fg=FG, font=FONT, justify="left").pack(anchor="w", pady=6)
 
-        btns = tk.Frame(f, bg=BG)
-        btns.pack(pady=8)
+        btns = tk.Frame(col, bg=BG)
+        btns.pack(fill="x", pady=(14, 0))
         tk.Button(btns, text="В главное меню", font=("Segoe UI", 13, "bold"), bg=ACCENT, fg="white",
-                  relief="flat", width=18, height=2, command=self.show_menu).pack(side="left", padx=8)
+                  relief="flat", height=2, command=self.show_menu).pack(fill="x")
         tk.Button(btns, text="Сохранить итоги в CSV", font=FONT_B, bg=PANEL, fg=FG,
-                  relief="flat", width=22, height=2, command=self.export_csv).pack(side="left", padx=8)
+                  relief="flat", height=2, command=self.export_csv).pack(fill="x", pady=(10, 0))
 
     def export_csv(self):
         res = self.result
@@ -887,8 +929,10 @@ class App:
                             "Задания", "Множитель", "Очки"])
                 for role, rows in ((SELLER, res["sellers"]), (BUYER, res["buyers"])):
                     for i, r in enumerate(rows, 1):
+                        # дробные — с запятой, задания — «1 из 3»: иначе русский Excel превратит «1.2» и «1/3» в даты
                         w.writerow([ROLE_NAME[role], i, r["player"].name, r["volume"], round(r["money"]),
-                                    round(r["eff"], 3) if r["eff"] else "", r["tasks"], round(r["mult"], 2),
+                                    f"{r['eff']:.3f}".replace(".", ",") if r["eff"] else "",
+                                    r["tasks"].replace("/", " из "), f"{r['mult']:.2f}".replace(".", ","),
                                     round(r["score"])])
                 w.writerow([])
                 w.writerow(["Время", "Товар", "Цена, ₽/т", "Объём, т", "Покупатель", "Продавец"])
@@ -908,8 +952,10 @@ class BookWidget(tk.Frame):
         super().__init__(app.ws, bg=PANEL, highlightbackground=BORDER, highlightthickness=1)
         self.app, self.product = app, product
         self.x = self.y = 0
-        self.item = app.ws.create_window(0, 0, window=self, anchor="nw")
-        self.header = tk.Label(self, text=PNAME[product], bg="#243042", fg=FG, font=FONT_B,
+        # ширина фиксирована: длинная подпись не должна наезжать на соседний стакан
+        self.item = app.ws.create_window(0, 0, window=self, anchor="nw", width=self.W + 2)
+        self.header = tk.Label(self, text=f"{PNAME[product]}   ·   база {fmt_num(BASE[product])} ₽/т",
+                               bg="#243042", fg=FG, font=FONT_B,
                                anchor="w", padx=8, pady=4, cursor="fleur")
         self.header.pack(fill="x")
         self.info = tk.Label(self, bg=PANEL, fg=MUTED, font=("Segoe UI", 9), anchor="w", padx=8)
@@ -927,6 +973,16 @@ class BookWidget(tk.Frame):
         for w in (self, self.header, self.info, self.canvas, self.spark, self.footer):
             w.bind("<Double-Button-1>", self._double)
         self.row_prices = []
+
+    def fit_height(self, height):
+        """Подобрать число строк стакана (4…8 на сторону), чтобы весь виджет был не выше height."""
+        fixed = self.winfo_reqheight() - int(self.canvas.cget("height"))
+        rows = min(8, max(4, (height - fixed - 20) // (2 * self.ROW_H)))
+        if rows != self.ROWS:
+            self.ROWS = rows
+            self.canvas.configure(height=rows * 2 * self.ROW_H + 20)
+            if self.app.game:
+                self.draw()
 
     def move_to(self, x, y):
         self.x, self.y = x, y
@@ -958,9 +1014,10 @@ class BookWidget(tk.Frame):
     def draw(self):
         m, me, p = self.app.game.market, self.app.game.me, self.product
         last = m.last[p]
-        chg = ((last / BASE[p] - 1) * 100) if last else 0.0
-        self.info.configure(text=f"Посл.: {fmt_num(last) if last else '—'}   {chg:+.1f}% к базе {fmt_num(BASE[p])}   "
-                                 f"объём {m.volume(p)} т",
+        chg = round(((last / BASE[p] - 1) * 100) if last else 0.0, 1) or 0.0   # без «-0.0%»
+        # базовая цена — в заголовке, чтобы строка не распирала стакан при больших объёмах
+        self.info.configure(text=f"Посл.: {fmt_num(last) if last else '—'}   {chg:+.1f}% к базе   "
+                                 f"объём {fmt_num(m.volume(p))} т",
                             fg=GREEN if chg > 0 else RED if chg < 0 else MUTED)
         if me.role == SELLER:
             self.footer.configure(text=f"У вас: {me.stock[p]} т, свободно {me.free_stock(p)} т · продано {me.sold[p]} т")
@@ -1046,17 +1103,17 @@ class OrderDialog(tk.Toplevel):
             price = best_opp or m.last[product] or BASE[product]
         tk.Label(self, text=("ПОКУПКА  " if buy else "ПРОДАЖА  ") + PNAME[product], bg=PANEL,
                  fg=GREEN if buy else RED, font=("Segoe UI", 13, "bold")).grid(row=0, column=0, columnspan=3, pady=(12, 4))
-        tk.Label(self, text=f"Лучшая покупка: {m.best_bid(product) or '—'}   лучшая продажа: {m.best_ask(product) or '—'}\n"
-                            f"Коридор цены: {fmt_num(lo)} … {fmt_num(hi)} ₽/т", bg=PANEL, fg=MUTED,
-                 font=FONT).grid(row=1, column=0, columnspan=3)
+        self.corridor = f"Коридор цены: {fmt_num(lo)} … {fmt_num(hi)} ₽/т"
+        self.lbl_book = tk.Label(self, bg=PANEL, fg=MUTED, font=FONT)   # лучшие цены обновляются в update_info
+        self.lbl_book.grid(row=1, column=0, columnspan=3)
 
         tk.Label(self, text="Цена, ₽/т:", bg=PANEL, fg=FG, font=FONT).grid(row=2, column=0, sticky="e", pady=6)
         self.price_var = tk.StringVar(value=str(price))
         tk.Spinbox(self, from_=lo, to=hi, increment=TICK, width=12, font=FONT,
                    textvariable=self.price_var).grid(row=2, column=1, sticky="w", padx=8)
-        tk.Button(self, text="лучшая встречная", bg=BG, fg=FG, relief="flat", font=("Segoe UI", 9),
-                  state="normal" if best_opp else "disabled",
-                  command=lambda: self.price_var.set(str(best_opp))).grid(row=2, column=2, sticky="w")
+        self.btn_best = tk.Button(self, text="лучшая встречная", bg=BG, fg=FG, relief="flat", font=("Segoe UI", 9),
+                                  command=self.set_best)
+        self.btn_best.grid(row=2, column=2, sticky="w")
 
         tk.Label(self, text=f"Объём, т (лот {LOT}):", bg=PANEL, fg=FG, font=FONT).grid(row=3, column=0, sticky="e", pady=6)
         self.qty_var = tk.StringVar(value=str(LOT))
@@ -1077,11 +1134,24 @@ class OrderDialog(tk.Toplevel):
         self.update_info()
         self.bind("<Return>", lambda e: self.submit())
         self.bind("<Escape>", lambda e: self.destroy())
-        self.geometry(f"+{max(0, app.root.winfo_pointerx() - 160)}+{max(0, app.root.winfo_pointery() - 80)}")
+        # у курсора, но не за краем экрана
+        self.update_idletasks()
+        x = min(app.root.winfo_pointerx() - 160, self.winfo_screenwidth() - self.winfo_reqwidth() - 10)
+        y = min(app.root.winfo_pointery() - 80, self.winfo_screenheight() - self.winfo_reqheight() - 60)
+        self.geometry(f"+{max(0, x)}+{max(0, y)}")
         self.qty_box.focus_set()
 
     def _values(self):
         return int(float(self.price_var.get())), int(float(self.qty_var.get()))
+
+    def _best_opp(self):
+        m = self.game.market
+        return m.best_ask(self.product) if self.buy else m.best_bid(self.product)
+
+    def set_best(self):
+        best = self._best_opp()     # берём текущую, а не ту, что была при открытии окна
+        if best:
+            self.price_var.set(str(best))
 
     def set_max(self):
         me = self.game.me
@@ -1097,6 +1167,9 @@ class OrderDialog(tk.Toplevel):
 
     def update_info(self, *_):
         me, m = self.game.me, self.game.market
+        self.lbl_book.configure(text=f"Лучшая покупка: {m.best_bid(self.product) or '—'}   "
+                                     f"лучшая продажа: {m.best_ask(self.product) or '—'}\n{self.corridor}")
+        self.btn_best.configure(state="normal" if self._best_opp() else "disabled")
         avail = (f"Свободно денег: {fmt_mln(me.free_cash())}" if self.buy
                  else f"Свободно товара: {me.free_stock(self.product)} т")
         try:
