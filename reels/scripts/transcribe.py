@@ -5,7 +5,9 @@ Word timings drive both the captions and the moments plaques appear.
 
 import json
 import sys
+import wave
 
+import numpy as np
 from faster_whisper import WhisperModel
 
 # Brand and product names Whisper tends to spell phonetically.
@@ -16,6 +18,11 @@ REPLACEMENTS = {
 }
 
 audio, out = sys.argv[1], sys.argv[2]
+# Read the 16 kHz mono WAV ourselves: faster-whisper's own decoder goes
+# through PyAV, and current PyAV releases break it (open() lost an argument).
+with wave.open(audio) as f:
+    samples = np.frombuffer(f.readframes(f.getnframes()), np.int16)
+audio = samples.astype(np.float32) / 32768
 model = WhisperModel("large-v3", device="cpu", compute_type="int8")
 # VAD trimming made large-v3 drop punctuation and mishear short words, so
 # it stays off; the prompt nudges spelling and punctuation.
