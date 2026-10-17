@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 28" width="64" height="28">
+  <!-- Авторская стилизация мотивов истанга: ромб и парные завитки. Не копия исторического орнамента. -->
+  <g fill="none" stroke="#c49a4a" stroke-width="1.6" stroke-linecap="round">
+    <path d="M32 6 L40 14 L32 22 L24 14 Z"/>
+    <path d="M32 10 L36 14 L32 18 L28 14 Z" fill="#c49a4a" stroke="none"/>
+    <path d="M24 14 H18 C14 14 12 11 13 8.5 C14 6.5 17 6.5 17.5 8.5 C18 10 16.5 11 15.5 10.3"/>
+    <path d="M40 14 H46 C50 14 52 17 51 19.5 C50 21.5 47 21.5 46.5 19.5 C46 18 47.5 17 48.5 17.7"/>
+    <path d="M0 14 H8 M56 14 H64"/>
+    <path d="M4 14 L6 12 L8 14 L6 16 Z M56 14 L58 12 L60 14 L58 16 Z" fill="#c49a4a" stroke="none"/>
+  </g>
+</svg>

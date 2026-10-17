@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Laman — сухофрукты с доставкой по Грозному</title>
+  <meta name="description" content="Курага, финики, инжир, чернослив и изюм. Выберите фасовку — привезём по Грозному в день заказа.">
+  <meta name="theme-color" content="#fbf6ec">
+  <meta property="og:title" content="Laman — сухофрукты к вашему столу">
+  <meta property="og:description" content="Привезём по Грозному в день заказа.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='6' width='20' height='20' rx='3' transform='rotate(45 16 16)' fill='%231f4d3a'/%3E%3Crect x='12' y='12' width='8' height='8' transform='rotate(45 16 16)' fill='%23c49a4a'/%3E%3C/svg%3E">
+  <link rel="preload" href="assets/fonts/lora-cyrillic-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#catalog">Перейти к каталогу</a>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <header class="top">
+    <a class="logo" href="#top" aria-label="Laman, на главную">
+      <span class="logo__mark" aria-hidden="true"></span>Laman
+    </a>
+    <nav class="top__nav" aria-label="Разделы">
+      <a href="#catalog">Каталог</a>
+      <a href="#delivery">Доставка</a>
+    </nav>
+    <button class="cart-btn" type="button" data-open-cart aria-label="Корзина, товаров: 0">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 4h2l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.4" fill="currentColor"/><circle cx="17" cy="19.5" r="1.4" fill="currentColor"/></svg>
+      <span class="cart-btn__count" data-cart-count hidden>0</span>
+    </button>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__text">
+        <h1 id="hero-title">Сухофрукты к вашему столу</h1>
+        <p class="hero__sub">Выберите любимое. Привезём по Грозному в день заказа.</p>
+        <a class="btn btn--primary" href="#catalog">Выбрать</a>
+      </div>
+
+      <div class="carousel" aria-roledescription="карусель" aria-label="Наши сухофрукты">
+        <div class="carousel__track" id="carousel-track" tabindex="0" aria-label="Листайте товары"></div>
+        <div class="carousel__controls">
+          <button class="round-btn" type="button" data-carousel="prev" aria-label="Предыдущий товар">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="carousel__dots" id="carousel-dots"></div>
+          <button class="round-btn" type="button" data-carousel="next" aria-label="Следующий товар">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div class="ornament" aria-hidden="true"></div>
+
+    <section class="catalog" id="catalog" aria-labelledby="catalog-title">
+      <div class="wrap">
+        <h2 id="catalog-title">Каталог</h2>
+        <p class="section-lead">Цена указана за упаковку. Фасовку выбираете в карточке.</p>
+        <ul class="grid" id="catalog-grid"></ul>
+      </div>
+    </section>
+
+    <section class="delivery" id="delivery" aria-labelledby="delivery-title">
+      <div class="wrap">
+        <h2 id="delivery-title">Доставка и оплата</h2>
+        <ul class="facts" id="delivery-facts"></ul>
+      </div>
+    </section>
+
+    <section class="contacts" id="contacts" aria-labelledby="contacts-title" hidden>
+      <div class="wrap">
+        <h2 id="contacts-title">Контакты</h2>
+        <ul class="contacts__list" id="contacts-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="ornament ornament--small" aria-hidden="true"></div>
+    <p>Laman · сухофрукты · Грозный</p>
+  </footer>
+
+  <div class="cart-bar" id="cart-bar" hidden>
+    <button class="cart-bar__btn" type="button" data-open-cart>
+      <span class="cart-bar__info"><span data-bar-count></span><span class="cart-bar__sum" data-bar-total></span></span>
+      <span class="cart-bar__cta">Корзина</span>
+    </button>
+  </div>
+
+  <dialog class="cart" id="cart" aria-labelledby="cart-title">
+    <div class="cart__head">
+      <h2 id="cart-title">Корзина</h2>
+      <button class="round-btn round-btn--ghost" type="button" data-close-cart aria-label="Закрыть корзину">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="cart__body">
+      <p class="cart__empty" id="cart-empty">Корзина пока пустая.</p>
+      <ul class="cart__items" id="cart-items"></ul>
+
+      <div class="summary" id="cart-summary">
+        <div class="summary__row"><span>Товары</span><span id="sum-items"></span></div>
+        <div class="summary__row"><span>Доставка по Грозному</span><span id="sum-delivery"></span></div>
+        <p class="summary__hint" id="sum-hint"></p>
+        <div class="summary__row summary__row--total"><span>Итого</span><span id="sum-total"></span></div>
+      </div>
+
+      <form class="order" id="order-form" novalidate>
+        <div class="field">
+          <label for="f-address">Адрес доставки</label>
+          <input id="f-address" name="address" autocomplete="street-address" required aria-describedby="f-address-err">
+          <p class="field__err" id="f-address-err" hidden>Укажите адрес, чтобы мы знали, куда везти.</p>
+        </div>
+        <div class="field">
+          <label for="f-name">Имя <span class="opt">необязательно</span></label>
+          <input id="f-name" name="name" autocomplete="given-name">
+        </div>
+        <div class="field">
+          <label for="f-comment">Комментарий <span class="opt">необязательно</span></label>
+          <input id="f-comment" name="comment" placeholder="Подъезд, время, пожелания">
+        </div>
+        <button class="btn btn--primary btn--wide" type="submit" id="order-submit">Оформить заказ</button>
+        <p class="order__note" id="order-note"></p>
+      </form>
+
+      <div class="prepared" id="prepared" hidden>
+        <p class="prepared__msg" id="prepared-text-label">Приём заказов пока не открыт. Сообщение с заказом готово: его можно скопировать.</p>
+        <textarea id="prepared-text" readonly rows="9" aria-labelledby="prepared-text-label"></textarea>
+        <button class="btn btn--primary btn--wide" type="button" id="copy-btn">Скопировать сообщение</button>
+        <button class="btn btn--ghost btn--wide" type="button" id="back-btn">Вернуться к заказу</button>
+      </div>
+    </div>
+  </dialog>
+
+  <p class="sr-only" aria-live="polite" id="live"></p>
+</body>
+</html>

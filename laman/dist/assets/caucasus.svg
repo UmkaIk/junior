@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMin slice">
+  <!-- Запасной фон каталога: стилизованные горы. Если в папке есть caucasus.webp, он ляжет сверху. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9efe9"/>
+      <stop offset="1" stop-color="#f7f1e4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#sky)"/>
+  <path d="M0 330 L120 250 L210 290 L330 170 L420 230 L520 120 L640 240 L720 200 L840 280 L960 150 L1080 250 L1200 210 V800 H0 Z" fill="#b9c7c4"/>
+  <path d="M330 170 L362 200 L345 198 L330 214 L312 204 Z M520 120 L556 156 L536 152 L520 170 L500 158 Z M960 150 L996 186 L976 182 L960 198 L940 186 Z" fill="#fbfaf6"/>
+  <path d="M0 420 L140 330 L260 380 L380 300 L520 370 L660 300 L800 380 L940 310 L1080 370 L1200 330 V800 H0 Z" fill="#8fa89a"/>
+  <path d="M0 520 L160 440 L320 500 L470 430 L640 510 L800 450 L960 520 L1100 460 L1200 490 V800 H0 Z" fill="#5f8571"/>
+  <path d="M0 620 L200 560 L400 610 L600 560 L820 620 L1000 575 L1200 610 V800 H0 Z" fill="#3f6853"/>
+</svg>
